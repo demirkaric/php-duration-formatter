@@ -1,5 +1,10 @@
 # 📦 php-duration-formatter
 
+[![PHPUnit](https://github.com/demirkaric/php-duration-formatter/actions/workflows/phpunit.yml/badge.svg)](https://github.com/demirkaric/php-duration-formatter/actions/workflows/phpunit.yml)
+[![Coverage Status](https://coveralls.io/repos/github/demirkaric/php-duration-formatter/badge.svg?branch=feat-static-instance)](https://coveralls.io/github/demirkaric/php-duration-formatter?branch=feat-static-instance)
+![PHP](https://img.shields.io/badge/PHP-%5E8.2-blue)
+![License](https://img.shields.io/badge/License-MIT-blue)
+
 **Advanced PHP library for parsing, formatting, converting, and humanizing time durations.**
 
 Supports intuitive input formats like `1h 30m`, `01:30:00`, or `5400` and provides custom formatting, JSON serialization, and accurate conversion to seconds and minutes.
@@ -117,7 +122,6 @@ echo $duration->humanize(); // "2d 3h 15m"
 
 This library is tested with [PHPUnit](https://phpunit.de):
 
-[![Coverage Status](https://coveralls.io/repos/github/demirkaric/php-duration-formatter/badge.svg?branch=feat-static-instance)](https://coveralls.io/github/demirkaric/php-duration-formatter?branch=feat-static-instance)
 - ✅ Covers parsing, formatting, rounding, edge cases, and serialization
 
 To run tests:
@@ -125,13 +129,6 @@ To run tests:
 ```bash
 vendor/bin/phpunit
 ```
-
----
-
-## 🛠 Requirements
-
-- **PHP >= 8.1**
-- **Composer**
 
 ---
 
