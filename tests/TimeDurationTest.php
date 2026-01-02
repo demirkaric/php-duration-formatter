@@ -179,6 +179,9 @@ final class TimeDurationTest extends TestCase
         yield 'days hours minutes seconds' => ['1d 2h 30m 45s', true];
         yield 'days with colon time' => ['1d 10:30:45', true];
         yield 'mixed formats' => ['2d 1h 30m', true];
+        yield 'ISO 8601 time' => ['PT1H30M', true];
+        yield 'ISO 8601 date time' => ['P1DT2H', true];
+        yield 'ISO 8601 weeks' => ['P2W', true];
     }
 
     /**
@@ -209,6 +212,7 @@ final class TimeDurationTest extends TestCase
         // Boolean and other types would be handled by type system, but let's test edge cases
         yield 'null string' => ['null', false];
         yield 'boolean string' => ['true', false];
+        yield 'invalid ISO 8601 designator' => ['P', false];
     }
 
     /**
@@ -234,6 +238,9 @@ final class TimeDurationTest extends TestCase
      * Validates handling of optional seconds and custom hours-per-day configuration.
      *
      * @throws ReflectionException
+     */
+    /**
+     * @dataProvider provideParseColonFormat
      */
     #[DataProvider('provideParseColonFormat')]
     public function testParseColonFormat(string $duration, int $days, int $hours, int $minutes, float|int $seconds, int $hoursPerDay = 24): void
@@ -301,6 +308,9 @@ final class TimeDurationTest extends TestCase
     /**
      * Tests custom format patterns and verifies that the formatted string matches expected output.
      */
+    /**
+     * @dataProvider provideFormatCustomPattern
+     */
     #[DataProvider('provideFormatCustomPattern')]
     public function testFormatCustomPattern(int|string $duration, string $format, string $expected): void
     {
@@ -351,6 +361,9 @@ final class TimeDurationTest extends TestCase
      * @param mixed $duration The duration input to validate
      * @param bool $expected The expected validation result
      */
+    /**
+     * @dataProvider provideValidDurations
+     */
     #[DataProvider('provideValidDurations')]
     public function testValidWithValidDurations(mixed $duration, bool $expected): void
     {
@@ -363,6 +376,9 @@ final class TimeDurationTest extends TestCase
      *
      * @param mixed $duration The duration input to validate
      * @param bool $expected The expected validation result
+     */
+    /**
+     * @dataProvider provideInvalidDurations
      */
     #[DataProvider('provideInvalidDurations')]
     public function testValidWithInvalidDurations(mixed $duration, bool $expected): void
@@ -583,6 +599,23 @@ final class TimeDurationTest extends TestCase
         $this->assertSame(1, $this->getPrivateProperty($largeDuration, 'hours'));
         $this->assertSame(1, $this->getPrivateProperty($largeDuration, 'minutes'));
         $this->assertSame(1.0, $this->getPrivateProperty($largeDuration, 'seconds'));
+    }
+
+    public function testIso8601Formatting(): void
+    {
+        $duration = new TimeDuration('1d 2h 3m 4s');
+
+        $this->assertSame('P1DT2H3M4S', $duration->toIso8601());
+    }
+
+    public function testIso8601ParsingWithWeeks(): void
+    {
+        $duration = new TimeDuration('P2W');
+
+        $this->assertSame(14, $this->getPrivateProperty($duration, 'days'));
+        $this->assertSame(0, $this->getPrivateProperty($duration, 'hours'));
+        $this->assertSame(1209600.0, $duration->toSeconds());
+        $this->assertSame('P14D', $duration->toIso8601());
     }
 
     /**

@@ -4,6 +4,7 @@
          backupGlobals="false"
          beStrictAboutOutputDuringTests="true"
          colors="true"
+         bootstrap="tests/bootstrap.php"
          executionOrder="random"
          failOnRisky="true"
          failOnWarning="true"
