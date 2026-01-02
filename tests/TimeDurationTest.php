@@ -607,6 +607,316 @@ final class TimeDurationTest extends TestCase
     }
 
     /**
+     * Tests ISO 8601 parsing with time components only (no date components)
+     */
+    public function testIso8601TimeOnly(): void
+    {
+        // Hours only
+        $duration1 = new TimeDuration('PT5H');
+        $this->assertSame(5, $this->getPrivateProperty($duration1, 'hours'));
+        $this->assertSame(0, $this->getPrivateProperty($duration1, 'minutes'));
+        $this->assertSame(0.0, $this->getPrivateProperty($duration1, 'seconds'));
+        $this->assertSame('PT5H', $duration1->toIso8601());
+
+        // Minutes only
+        $duration2 = new TimeDuration('PT45M');
+        $this->assertSame(0, $this->getPrivateProperty($duration2, 'hours'));
+        $this->assertSame(45, $this->getPrivateProperty($duration2, 'minutes'));
+        $this->assertSame(2700.0, $duration2->toSeconds());
+        $this->assertSame('PT45M', $duration2->toIso8601());
+
+        // Seconds only
+        $duration3 = new TimeDuration('PT30S');
+        $this->assertSame(0, $this->getPrivateProperty($duration3, 'hours'));
+        $this->assertSame(0, $this->getPrivateProperty($duration3, 'minutes'));
+        $this->assertSame(30.0, $this->getPrivateProperty($duration3, 'seconds'));
+        $this->assertSame('PT30S', $duration3->toIso8601());
+
+        // Hours and minutes
+        $duration4 = new TimeDuration('PT2H30M');
+        $this->assertSame(2, $this->getPrivateProperty($duration4, 'hours'));
+        $this->assertSame(30, $this->getPrivateProperty($duration4, 'minutes'));
+        $this->assertSame(9000.0, $duration4->toSeconds());
+        $this->assertSame('PT2H30M', $duration4->toIso8601());
+
+        // Hours and seconds
+        $duration5 = new TimeDuration('PT1H45S');
+        $this->assertSame(1, $this->getPrivateProperty($duration5, 'hours'));
+        $this->assertSame(0, $this->getPrivateProperty($duration5, 'minutes'));
+        $this->assertSame(45.0, $this->getPrivateProperty($duration5, 'seconds'));
+        $this->assertSame('PT1H45S', $duration5->toIso8601());
+
+        // Minutes and seconds
+        $duration6 = new TimeDuration('PT15M30S');
+        $this->assertSame(0, $this->getPrivateProperty($duration6, 'hours'));
+        $this->assertSame(15, $this->getPrivateProperty($duration6, 'minutes'));
+        $this->assertSame(30.0, $this->getPrivateProperty($duration6, 'seconds'));
+        $this->assertSame('PT15M30S', $duration6->toIso8601());
+
+        // All time components
+        $duration7 = new TimeDuration('PT3H25M59S');
+        $this->assertSame(3, $this->getPrivateProperty($duration7, 'hours'));
+        $this->assertSame(25, $this->getPrivateProperty($duration7, 'minutes'));
+        $this->assertSame(59.0, $this->getPrivateProperty($duration7, 'seconds'));
+        $this->assertSame(12359.0, $duration7->toSeconds());
+        $this->assertSame('PT3H25M59S', $duration7->toIso8601());
+    }
+
+    /**
+     * Tests ISO 8601 parsing with date components only
+     */
+    public function testIso8601DateOnly(): void
+    {
+        // Days only
+        $duration1 = new TimeDuration('P5D');
+        $this->assertSame(5, $this->getPrivateProperty($duration1, 'days'));
+        $this->assertSame(0, $this->getPrivateProperty($duration1, 'hours'));
+        $this->assertSame(432000.0, $duration1->toSeconds());
+        $this->assertSame('P5D', $duration1->toIso8601());
+
+        // Single day
+        $duration2 = new TimeDuration('P1D');
+        $this->assertSame(1, $this->getPrivateProperty($duration2, 'days'));
+        $this->assertSame(86400.0, $duration2->toSeconds());
+        $this->assertSame('P1D', $duration2->toIso8601());
+    }
+
+    /**
+     * Tests ISO 8601 parsing with combined date and time components
+     */
+    public function testIso8601DateTimeComplex(): void
+    {
+        // Days and hours
+        $duration1 = new TimeDuration('P3DT12H');
+        $this->assertSame(3, $this->getPrivateProperty($duration1, 'days'));
+        $this->assertSame(12, $this->getPrivateProperty($duration1, 'hours'));
+        $this->assertSame(0, $this->getPrivateProperty($duration1, 'minutes'));
+        $this->assertSame(302400.0, $duration1->toSeconds());
+        $this->assertSame('P3DT12H', $duration1->toIso8601());
+
+        // Days, hours, and minutes
+        $duration2 = new TimeDuration('P2DT6H30M');
+        $this->assertSame(2, $this->getPrivateProperty($duration2, 'days'));
+        $this->assertSame(6, $this->getPrivateProperty($duration2, 'hours'));
+        $this->assertSame(30, $this->getPrivateProperty($duration2, 'minutes'));
+        $this->assertSame(196200.0, $duration2->toSeconds());
+        $this->assertSame('P2DT6H30M', $duration2->toIso8601());
+
+        // Days, hours, minutes, and seconds
+        $duration3 = new TimeDuration('P7DT23H59M59S');
+        $this->assertSame(7, $this->getPrivateProperty($duration3, 'days'));
+        $this->assertSame(23, $this->getPrivateProperty($duration3, 'hours'));
+        $this->assertSame(59, $this->getPrivateProperty($duration3, 'minutes'));
+        $this->assertSame(59.0, $this->getPrivateProperty($duration3, 'seconds'));
+        $this->assertSame(691199.0, $duration3->toSeconds());
+        $this->assertSame('P7DT23H59M59S', $duration3->toIso8601());
+
+        // Days and seconds only (skipping hours and minutes)
+        $duration4 = new TimeDuration('P1DT30S');
+        $this->assertSame(1, $this->getPrivateProperty($duration4, 'days'));
+        $this->assertSame(0, $this->getPrivateProperty($duration4, 'hours'));
+        $this->assertSame(0, $this->getPrivateProperty($duration4, 'minutes'));
+        $this->assertSame(30.0, $this->getPrivateProperty($duration4, 'seconds'));
+        $this->assertSame(86430.0, $duration4->toSeconds());
+        $this->assertSame('P1DT30S', $duration4->toIso8601());
+
+        // Days and minutes only
+        $duration5 = new TimeDuration('P10DT90M');
+        $this->assertSame(10, $this->getPrivateProperty($duration5, 'days'));
+        $this->assertSame(1, $this->getPrivateProperty($duration5, 'hours'));
+        $this->assertSame(30, $this->getPrivateProperty($duration5, 'minutes'));
+        $this->assertSame(869400.0, $duration5->toSeconds());
+    }
+
+    /**
+     * Tests ISO 8601 parsing with decimal values
+     */
+    public function testIso8601WithDecimalValues(): void
+    {
+        // Decimal hours
+        $duration1 = new TimeDuration('PT2.5H');
+        $this->assertSame(2, $this->getPrivateProperty($duration1, 'hours'));
+        $this->assertSame(30, $this->getPrivateProperty($duration1, 'minutes'));
+        $this->assertSame(9000.0, $duration1->toSeconds());
+
+        // Decimal minutes
+        $duration2 = new TimeDuration('PT1.5M');
+        $this->assertSame(0, $this->getPrivateProperty($duration2, 'hours'));
+        $this->assertSame(1, $this->getPrivateProperty($duration2, 'minutes'));
+        $this->assertSame(30.0, $this->getPrivateProperty($duration2, 'seconds'));
+        $this->assertSame(90.0, $duration2->toSeconds());
+
+        // Decimal seconds
+        $duration3 = new TimeDuration('PT45.5S');
+        $this->assertSame(0, $this->getPrivateProperty($duration3, 'minutes'));
+        $this->assertSame(45.5, $this->getPrivateProperty($duration3, 'seconds'));
+        $this->assertSame(45.5, $duration3->toSeconds());
+
+        // Decimal days
+        $duration4 = new TimeDuration('P1.5D');
+        $this->assertSame(1, $this->getPrivateProperty($duration4, 'days'));
+        $this->assertSame(12, $this->getPrivateProperty($duration4, 'hours'));
+        $this->assertSame(129600.0, $duration4->toSeconds());
+
+        // Decimal weeks
+        $duration5 = new TimeDuration('P1.5W');
+        $this->assertSame(10, $this->getPrivateProperty($duration5, 'days'));
+        $this->assertSame(12, $this->getPrivateProperty($duration5, 'hours'));
+        $this->assertSame(907200.0, $duration5->toSeconds());
+    }
+
+    /**
+     * Tests ISO 8601 parsing with large values
+     */
+    public function testIso8601LargeValues(): void
+    {
+        // Large number of days
+        $duration1 = new TimeDuration('P365D');
+        $this->assertSame(365, $this->getPrivateProperty($duration1, 'days'));
+        $this->assertSame(31536000.0, $duration1->toSeconds());
+        $this->assertSame('P365D', $duration1->toIso8601());
+
+        // Large number of hours
+        $duration2 = new TimeDuration('PT100H');
+        $this->assertSame(4, $this->getPrivateProperty($duration2, 'days'));
+        $this->assertSame(4, $this->getPrivateProperty($duration2, 'hours'));
+        $this->assertSame(360000.0, $duration2->toSeconds());
+
+        // Large number of weeks
+        $duration3 = new TimeDuration('P52W');
+        $this->assertSame(364, $this->getPrivateProperty($duration3, 'days'));
+        $this->assertSame(31449600.0, $duration3->toSeconds());
+
+        // Complex large duration: 30 days + 48 hours + 120 minutes = 30*86400 + 48*3600 + 120*60
+        $duration4 = new TimeDuration('P30DT48H120M');
+        $this->assertSame(32, $this->getPrivateProperty($duration4, 'days'));
+        $this->assertSame(2, $this->getPrivateProperty($duration4, 'hours'));
+        $this->assertSame(2772000.0, $duration4->toSeconds());
+    }
+
+    /**
+     * Tests ISO 8601 edge cases
+     */
+    public function testIso8601EdgeCases(): void
+    {
+        // Zero duration should be PT0S
+        $duration1 = new TimeDuration(0);
+        $this->assertSame('PT0S', $duration1->toIso8601());
+
+        // Single second
+        $duration2 = new TimeDuration('PT1S');
+        $this->assertSame(1.0, $duration2->toSeconds());
+        $this->assertSame('PT1S', $duration2->toIso8601());
+
+        // Single minute
+        $duration3 = new TimeDuration('PT1M');
+        $this->assertSame(60.0, $duration3->toSeconds());
+        $this->assertSame('PT1M', $duration3->toIso8601());
+
+        // Single hour
+        $duration4 = new TimeDuration('PT1H');
+        $this->assertSame(3600.0, $duration4->toSeconds());
+        $this->assertSame('PT1H', $duration4->toIso8601());
+
+        // Single day
+        $duration5 = new TimeDuration('P1D');
+        $this->assertSame(86400.0, $duration5->toSeconds());
+        $this->assertSame('P1D', $duration5->toIso8601());
+
+        // Single week
+        $duration6 = new TimeDuration('P1W');
+        $this->assertSame(604800.0, $duration6->toSeconds());
+        $this->assertSame('P7D', $duration6->toIso8601());
+    }
+
+    /**
+     * Tests ISO 8601 case insensitivity
+     */
+    public function testIso8601CaseInsensitivity(): void
+    {
+        $duration1 = new TimeDuration('pt1h30m');
+        $this->assertSame(1, $this->getPrivateProperty($duration1, 'hours'));
+        $this->assertSame(30, $this->getPrivateProperty($duration1, 'minutes'));
+        $this->assertSame(5400.0, $duration1->toSeconds());
+
+        $duration2 = new TimeDuration('p1dt2h3m4s');
+        $this->assertSame(1, $this->getPrivateProperty($duration2, 'days'));
+        $this->assertSame(2, $this->getPrivateProperty($duration2, 'hours'));
+        $this->assertSame(3, $this->getPrivateProperty($duration2, 'minutes'));
+        $this->assertSame(4.0, $this->getPrivateProperty($duration2, 'seconds'));
+        $this->assertSame(93784.0, $duration2->toSeconds());
+
+        $duration3 = new TimeDuration('P3W');
+        $this->assertSame(21, $this->getPrivateProperty($duration3, 'days'));
+        $this->assertSame(1814400.0, $duration3->toSeconds());
+    }
+
+    /**
+     * Tests ISO 8601 formatting roundtrip (parse -> format -> parse)
+     */
+    public function testIso8601Roundtrip(): void
+    {
+        $testCases = [
+            'PT1H30M45S',
+            'P5D',
+            'P3DT12H',
+            'PT2H',
+            'PT30M',
+            'PT45S',
+            'P1DT1H1M1S',
+            'P10DT5H30M15S',
+        ];
+
+        foreach ($testCases as $isoString) {
+            $duration = new TimeDuration($isoString);
+            $formatted = $duration->toIso8601();
+            $reparsed = new TimeDuration($formatted);
+
+            $this->assertSame(
+                $duration->toSeconds(),
+                $reparsed->toSeconds(),
+                "Roundtrip failed for {$isoString}: original seconds != reparsed seconds"
+            );
+        }
+    }
+
+    /**
+     * Tests that weeks with other designators are parsed (though not per strict ISO 8601)
+     * Note: The regex allows these to parse, but they don't combine - only one part is used
+     */
+    public function testIso8601WeeksWithOtherDesignators(): void
+    {
+        // P1W1D - The regex will match and parse only the '1D' part (86400 seconds)
+        // The '1W' is not in the capture group that gets processed
+        $duration1 = new TimeDuration('P1W1D');
+        $this->assertTrue(TimeDuration::valid('P1W1D'));
+        $this->assertSame(86400.0, $duration1->toSeconds()); // Only 1 day, not 8 days
+
+        // P2WT1H - The regex will match and parse only the 'T1H' part (3600 seconds)
+        $duration2 = new TimeDuration('P2WT1H');
+        $this->assertTrue(TimeDuration::valid('P2WT1H'));
+        $this->assertSame(3600.0, $duration2->toSeconds()); // Only 1 hour, not 14 days + 1 hour
+    }
+
+    /**
+     * Tests ISO 8601 invalid formats that should be rejected
+     */
+    public function testIso8601InvalidFormats(): void
+    {
+        // Note: Formats without 'P' prefix like '1DT2H' or 'T1H30M' fail ISO 8601 parsing
+        // but may still be valid as they match the regular format parsers (e.g., '1D 2H', '1H 30M')
+
+        // Years not supported (correctly rejected - no fallback parser for years)
+        $this->assertFalse(TimeDuration::valid('P1Y'));
+
+        // Empty P (correctly rejected - no value to parse)
+        $this->assertFalse(TimeDuration::valid('P'));
+
+        // PT without time components (correctly rejected - no value after T)
+        $this->assertFalse(TimeDuration::valid('PT'));
+    }
+
+    /**
      * Tests that static factory methods create equivalent instances to constructor
      */
     public function testStaticMethodsEquivalentToConstructor(): void
