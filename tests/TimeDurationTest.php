@@ -239,9 +239,6 @@ final class TimeDurationTest extends TestCase
      *
      * @throws ReflectionException
      */
-    /**
-     * @dataProvider provideParseColonFormat
-     */
     #[DataProvider('provideParseColonFormat')]
     public function testParseColonFormat(string $duration, int $days, int $hours, int $minutes, float|int $seconds, int $hoursPerDay = 24): void
     {
@@ -308,9 +305,6 @@ final class TimeDurationTest extends TestCase
     /**
      * Tests custom format patterns and verifies that the formatted string matches expected output.
      */
-    /**
-     * @dataProvider provideFormatCustomPattern
-     */
     #[DataProvider('provideFormatCustomPattern')]
     public function testFormatCustomPattern(int|string $duration, string $format, string $expected): void
     {
@@ -361,9 +355,6 @@ final class TimeDurationTest extends TestCase
      * @param mixed $duration The duration input to validate
      * @param bool $expected The expected validation result
      */
-    /**
-     * @dataProvider provideValidDurations
-     */
     #[DataProvider('provideValidDurations')]
     public function testValidWithValidDurations(mixed $duration, bool $expected): void
     {
@@ -376,9 +367,6 @@ final class TimeDurationTest extends TestCase
      *
      * @param mixed $duration The duration input to validate
      * @param bool $expected The expected validation result
-     */
-    /**
-     * @dataProvider provideInvalidDurations
      */
     #[DataProvider('provideInvalidDurations')]
     public function testValidWithInvalidDurations(mixed $duration, bool $expected): void
