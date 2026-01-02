@@ -753,9 +753,9 @@ final class TimeDurationTest extends TestCase
     {
         // [input, expectedDays, expectedHours, expectedTotalSeconds, expectedIso8601]
         yield 'large number of days' => ['P365D', 365, 0, 31536000.0, 'P365D'];
-        yield 'large number of hours' => ['PT100H', 4, 4, 360000.0, null];
-        yield 'large number of weeks' => ['P52W', 364, 0, 31449600.0, null];
-        yield 'complex large duration' => ['P30DT48H120M', 32, 2, 2772000.0, null];
+        yield 'large number of hours' => ['PT100H', 4, 4, 360000.0, 'P4DT4H'];
+        yield 'large number of weeks' => ['P52W', 364, 0, 31449600.0, 'P364D'];
+        yield 'complex large duration' => ['P30DT48H120M', 32, 2, 2772000.0, 'P32DT2H'];
     }
 
     /**
@@ -767,17 +767,15 @@ final class TimeDurationTest extends TestCase
         int $expectedDays,
         int $expectedHours,
         float $expectedTotalSeconds,
-        ?string $expectedIso8601
+        string $expectedIso8601
     ): void {
         $duration = new TimeDuration($input);
 
         $this->assertSame($expectedDays, $this->getPrivateProperty($duration, 'days'));
         $this->assertSame($expectedHours, $this->getPrivateProperty($duration, 'hours'));
         $this->assertSame($expectedTotalSeconds, $duration->toSeconds());
+        $this->assertSame($expectedIso8601, $duration->toIso8601());
 
-        if ($expectedIso8601 !== null) {
-            $this->assertSame($expectedIso8601, $duration->toIso8601());
-        }
     }
 
     /**
