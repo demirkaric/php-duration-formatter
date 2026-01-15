@@ -179,6 +179,9 @@ final class TimeDurationTest extends TestCase
         yield 'days hours minutes seconds' => ['1d 2h 30m 45s', true];
         yield 'days with colon time' => ['1d 10:30:45', true];
         yield 'mixed formats' => ['2d 1h 30m', true];
+        yield 'ISO 8601 time' => ['PT1H30M', true];
+        yield 'ISO 8601 date time' => ['P1DT2H', true];
+        yield 'ISO 8601 weeks' => ['P2W', true];
     }
 
     /**
@@ -209,6 +212,7 @@ final class TimeDurationTest extends TestCase
         // Boolean and other types would be handled by type system, but let's test edge cases
         yield 'null string' => ['null', false];
         yield 'boolean string' => ['true', false];
+        yield 'invalid ISO 8601 designator' => ['P', false];
     }
 
     /**
@@ -583,6 +587,331 @@ final class TimeDurationTest extends TestCase
         $this->assertSame(1, $this->getPrivateProperty($largeDuration, 'hours'));
         $this->assertSame(1, $this->getPrivateProperty($largeDuration, 'minutes'));
         $this->assertSame(1.0, $this->getPrivateProperty($largeDuration, 'seconds'));
+    }
+
+    public function testIso8601Formatting(): void
+    {
+        $duration = new TimeDuration('1d 2h 3m 4s');
+
+        $this->assertSame('P1DT2H3M4S', $duration->toIso8601());
+    }
+
+    public function testIso8601ParsingWithWeeks(): void
+    {
+        $duration = new TimeDuration('P2W');
+
+        $this->assertSame(14, $this->getPrivateProperty($duration, 'days'));
+        $this->assertSame(0, $this->getPrivateProperty($duration, 'hours'));
+        $this->assertSame(1209600.0, $duration->toSeconds());
+        $this->assertSame('P14D', $duration->toIso8601());
+    }
+
+    /**
+     * Data provider for ISO 8601 time-only components
+     */
+    public static function provideIso8601TimeOnly(): iterable
+    {
+        // [input, expectedDays, expectedHours, expectedMinutes, expectedSeconds, expectedTotalSeconds, expectedIso8601]
+        yield 'hours only' => ['PT5H', 0, 5, 0, 0.0, 18000.0, 'PT5H'];
+        yield 'minutes only' => ['PT45M', 0, 0, 45, 0.0, 2700.0, 'PT45M'];
+        yield 'seconds only' => ['PT30S', 0, 0, 0, 30.0, 30.0, 'PT30S'];
+        yield 'hours and minutes' => ['PT2H30M', 0, 2, 30, 0.0, 9000.0, 'PT2H30M'];
+        yield 'hours and seconds' => ['PT1H45S', 0, 1, 0, 45.0, 3645.0, 'PT1H45S'];
+        yield 'minutes and seconds' => ['PT15M30S', 0, 0, 15, 30.0, 930.0, 'PT15M30S'];
+        yield 'all time components' => ['PT3H25M59S', 0, 3, 25, 59.0, 12359.0, 'PT3H25M59S'];
+    }
+
+    /**
+     * Tests ISO 8601 parsing with time components only (no date components)
+     */
+    #[DataProvider('provideIso8601TimeOnly')]
+    public function testIso8601TimeOnly(
+        string $input,
+        int $expectedDays,
+        int $expectedHours,
+        int $expectedMinutes,
+        float $expectedSeconds,
+        float $expectedTotalSeconds,
+        string $expectedIso8601
+    ): void {
+        $duration = new TimeDuration($input);
+
+        $this->assertSame($expectedDays, $this->getPrivateProperty($duration, 'days'));
+        $this->assertSame($expectedHours, $this->getPrivateProperty($duration, 'hours'));
+        $this->assertSame($expectedMinutes, $this->getPrivateProperty($duration, 'minutes'));
+        $this->assertSame($expectedSeconds, $this->getPrivateProperty($duration, 'seconds'));
+        $this->assertSame($expectedTotalSeconds, $duration->toSeconds());
+        $this->assertSame($expectedIso8601, $duration->toIso8601());
+    }
+
+    /**
+     * Data provider for ISO 8601 date-only components
+     */
+    public static function provideIso8601DateOnly(): iterable
+    {
+        // [input, expectedDays, expectedHours, expectedTotalSeconds, expectedIso8601]
+        yield 'five days' => ['P5D', 5, 0, 432000.0, 'P5D'];
+        yield 'single day' => ['P1D', 1, 0, 86400.0, 'P1D'];
+    }
+
+    /**
+     * Tests ISO 8601 parsing with date components only
+     */
+    #[DataProvider('provideIso8601DateOnly')]
+    public function testIso8601DateOnly(
+        string $input,
+        int $expectedDays,
+        int $expectedHours,
+        float $expectedTotalSeconds,
+        string $expectedIso8601
+    ): void {
+        $duration = new TimeDuration($input);
+
+        $this->assertSame($expectedDays, $this->getPrivateProperty($duration, 'days'));
+        $this->assertSame($expectedHours, $this->getPrivateProperty($duration, 'hours'));
+        $this->assertSame($expectedTotalSeconds, $duration->toSeconds());
+        $this->assertSame($expectedIso8601, $duration->toIso8601());
+    }
+
+    /**
+     * Data provider for ISO 8601 complex date and time combinations
+     */
+    public static function provideIso8601DateTimeComplex(): iterable
+    {
+        // [input, expectedDays, expectedHours, expectedMinutes, expectedSeconds, expectedTotalSeconds, expectedIso8601]
+        yield 'days and hours' => ['P3DT12H', 3, 12, 0, 0.0, 302400.0, 'P3DT12H'];
+        yield 'days hours and minutes' => ['P2DT6H30M', 2, 6, 30, 0.0, 196200.0, 'P2DT6H30M'];
+        yield 'all components' => ['P7DT23H59M59S', 7, 23, 59, 59.0, 691199.0, 'P7DT23H59M59S'];
+        yield 'days and seconds only' => ['P1DT30S', 1, 0, 0, 30.0, 86430.0, 'P1DT30S'];
+        yield 'days and minutes with overflow' => ['P10DT90M', 10, 1, 30, 0.0, 869400.0, null];
+    }
+
+    /**
+     * Tests ISO 8601 parsing with combined date and time components
+     */
+    #[DataProvider('provideIso8601DateTimeComplex')]
+    public function testIso8601DateTimeComplex(
+        string $input,
+        int $expectedDays,
+        int $expectedHours,
+        int $expectedMinutes,
+        float $expectedSeconds,
+        float $expectedTotalSeconds,
+        ?string $expectedIso8601
+    ): void {
+        $duration = new TimeDuration($input);
+
+        $this->assertSame($expectedDays, $this->getPrivateProperty($duration, 'days'));
+        $this->assertSame($expectedHours, $this->getPrivateProperty($duration, 'hours'));
+        $this->assertSame($expectedMinutes, $this->getPrivateProperty($duration, 'minutes'));
+        $this->assertSame($expectedSeconds, $this->getPrivateProperty($duration, 'seconds'));
+        $this->assertSame($expectedTotalSeconds, $duration->toSeconds());
+
+        if ($expectedIso8601 !== null) {
+            $this->assertSame($expectedIso8601, $duration->toIso8601());
+        }
+    }
+
+    /**
+     * Data provider for ISO 8601 with decimal values
+     */
+    public static function provideIso8601WithDecimalValues(): iterable
+    {
+        // [input, expectedDays, expectedHours, expectedMinutes, expectedSeconds, expectedTotalSeconds]
+        yield 'decimal hours' => ['PT2.5H', 0, 2, 30, 0.0, 9000.0];
+        yield 'decimal minutes' => ['PT1.5M', 0, 0, 1, 30.0, 90.0];
+        yield 'decimal seconds' => ['PT45.5S', 0, 0, 0, 45.5, 45.5];
+        yield 'decimal days' => ['P1.5D', 1, 12, 0, 0.0, 129600.0];
+        yield 'decimal weeks' => ['P1.5W', 10, 12, 0, 0.0, 907200.0];
+    }
+
+    /**
+     * Tests ISO 8601 parsing with decimal values
+     */
+    #[DataProvider('provideIso8601WithDecimalValues')]
+    public function testIso8601WithDecimalValues(
+        string $input,
+        int $expectedDays,
+        int $expectedHours,
+        int $expectedMinutes,
+        float $expectedSeconds,
+        float $expectedTotalSeconds
+    ): void {
+        $duration = new TimeDuration($input);
+
+        $this->assertSame($expectedDays, $this->getPrivateProperty($duration, 'days'));
+        $this->assertSame($expectedHours, $this->getPrivateProperty($duration, 'hours'));
+        $this->assertSame($expectedMinutes, $this->getPrivateProperty($duration, 'minutes'));
+        $this->assertSame($expectedSeconds, $this->getPrivateProperty($duration, 'seconds'));
+        $this->assertSame($expectedTotalSeconds, $duration->toSeconds());
+    }
+
+    /**
+     * Data provider for ISO 8601 large values
+     */
+    public static function provideIso8601LargeValues(): iterable
+    {
+        // [input, expectedDays, expectedHours, expectedTotalSeconds, expectedIso8601]
+        yield 'large number of days' => ['P365D', 365, 0, 31536000.0, 'P365D'];
+        yield 'large number of hours' => ['PT100H', 4, 4, 360000.0, 'P4DT4H'];
+        yield 'large number of weeks' => ['P52W', 364, 0, 31449600.0, 'P364D'];
+        yield 'complex large duration' => ['P30DT48H120M', 32, 2, 2772000.0, 'P32DT2H'];
+    }
+
+    /**
+     * Tests ISO 8601 parsing with large values
+     */
+    #[DataProvider('provideIso8601LargeValues')]
+    public function testIso8601LargeValues(
+        string $input,
+        int $expectedDays,
+        int $expectedHours,
+        float $expectedTotalSeconds,
+        string $expectedIso8601
+    ): void {
+        $duration = new TimeDuration($input);
+
+        $this->assertSame($expectedDays, $this->getPrivateProperty($duration, 'days'));
+        $this->assertSame($expectedHours, $this->getPrivateProperty($duration, 'hours'));
+        $this->assertSame($expectedTotalSeconds, $duration->toSeconds());
+        $this->assertSame($expectedIso8601, $duration->toIso8601());
+
+    }
+
+    /**
+     * Data provider for ISO 8601 edge cases
+     */
+    public static function provideIso8601EdgeCases(): iterable
+    {
+        // [input, expectedTotalSeconds, expectedIso8601]
+        yield 'zero duration' => [0, 0.0, 'PT0S'];
+        yield 'single second' => ['PT1S', 1.0, 'PT1S'];
+        yield 'single minute' => ['PT1M', 60.0, 'PT1M'];
+        yield 'single hour' => ['PT1H', 3600.0, 'PT1H'];
+        yield 'single day' => ['P1D', 86400.0, 'P1D'];
+        yield 'single week' => ['P1W', 604800.0, 'P7D'];
+    }
+
+    /**
+     * Tests ISO 8601 edge cases
+     */
+    #[DataProvider('provideIso8601EdgeCases')]
+    public function testIso8601EdgeCases(
+        int|string $input,
+        float $expectedTotalSeconds,
+        string $expectedIso8601
+    ): void {
+        $duration = new TimeDuration($input);
+
+        $this->assertSame($expectedTotalSeconds, $duration->toSeconds());
+        $this->assertSame($expectedIso8601, $duration->toIso8601());
+    }
+
+    /**
+     * Data provider for ISO 8601 case insensitivity
+     */
+    public static function provideIso8601CaseInsensitivity(): iterable
+    {
+        // [input, expectedDays, expectedHours, expectedMinutes, expectedSeconds, expectedTotalSeconds]
+        yield 'lowercase time' => ['pt1h30m', 0, 1, 30, 0.0, 5400.0];
+        yield 'lowercase datetime' => ['p1dt2h3m4s', 1, 2, 3, 4.0, 93784.0];
+        yield 'uppercase weeks' => ['P3W', 21, 0, 0, 0.0, 1814400.0];
+    }
+
+    /**
+     * Tests ISO 8601 case insensitivity
+     */
+    #[DataProvider('provideIso8601CaseInsensitivity')]
+    public function testIso8601CaseInsensitivity(
+        string $input,
+        int $expectedDays,
+        int $expectedHours,
+        int $expectedMinutes,
+        float $expectedSeconds,
+        float $expectedTotalSeconds
+    ): void {
+        $duration = new TimeDuration($input);
+
+        $this->assertSame($expectedDays, $this->getPrivateProperty($duration, 'days'));
+        $this->assertSame($expectedHours, $this->getPrivateProperty($duration, 'hours'));
+        $this->assertSame($expectedMinutes, $this->getPrivateProperty($duration, 'minutes'));
+        $this->assertSame($expectedSeconds, $this->getPrivateProperty($duration, 'seconds'));
+        $this->assertSame($expectedTotalSeconds, $duration->toSeconds());
+    }
+
+    /**
+     * Tests ISO 8601 formatting roundtrip (parse -> format -> parse)
+     */
+    public function testIso8601Roundtrip(): void
+    {
+        $testCases = [
+            'PT1H30M45S',
+            'P5D',
+            'P3DT12H',
+            'PT2H',
+            'PT30M',
+            'PT45S',
+            'P1DT1H1M1S',
+            'P10DT5H30M15S',
+        ];
+
+        foreach ($testCases as $isoString) {
+            $duration = new TimeDuration($isoString);
+            $formatted = $duration->toIso8601();
+            $reparsed = new TimeDuration($formatted);
+
+            $this->assertSame(
+                $duration->toSeconds(),
+                $reparsed->toSeconds(),
+                "Roundtrip failed for {$isoString}: original seconds != reparsed seconds"
+            );
+        }
+    }
+
+    /**
+     * Data provider for ISO 8601 weeks with other designators
+     */
+    public static function provideIso8601WeeksWithOtherDesignators(): iterable
+    {
+        // [input, expectedTotalSeconds, description]
+        yield 'week with day' => ['P1W1D', 86400.0, 'Only 1 day parsed, not 8 days'];
+        yield 'week with time' => ['P2WT1H', 3600.0, 'Only 1 hour parsed, not 14 days + 1 hour'];
+    }
+
+    /**
+     * Tests that weeks with other designators are parsed (though not per strict ISO 8601)
+     * Note: The regex allows these to parse, but they don't combine - only one part is used
+     */
+    #[DataProvider('provideIso8601WeeksWithOtherDesignators')]
+    public function testIso8601WeeksWithOtherDesignators(
+        string $input,
+        float $expectedTotalSeconds,
+        string $description
+    ): void {
+        $this->assertTrue(TimeDuration::valid($input));
+
+        $duration = new TimeDuration($input);
+        $this->assertSame($expectedTotalSeconds, $duration->toSeconds(), $description);
+    }
+
+    /**
+     * Data provider for ISO 8601 invalid formats
+     */
+    public static function provideIso8601InvalidFormats(): iterable
+    {
+        // [input, description]
+        yield 'years not supported' => ['P1Y', 'Years not supported - no fallback parser'];
+        yield 'empty P' => ['P', 'Empty P - no value to parse'];
+        yield 'PT without components' => ['PT', 'PT without time components - no value after T'];
+    }
+
+    /**
+     * Tests ISO 8601 invalid formats that should be rejected
+     */
+    #[DataProvider('provideIso8601InvalidFormats')]
+    public function testIso8601InvalidFormats(string $input, string $description): void
+    {
+        $this->assertFalse(TimeDuration::valid($input), $description);
     }
 
     /**

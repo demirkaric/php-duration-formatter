@@ -112,6 +112,10 @@ final class TimeDuration implements JsonSerializable, Stringable
             return $this->parseNumeric((float)$duration);
         }
 
+        if (is_string($duration) && $this->parseIso8601($duration)) {
+            return $this;
+        }
+
         $totalSeconds = 0.0;
         $hasMatch = false;
 
@@ -151,6 +155,55 @@ final class TimeDuration implements JsonSerializable, Stringable
         $this->parseNumeric($totalSeconds);
 
         return $this;
+    }
+
+    private function parseIso8601(string $duration): bool
+    {
+        $isoRegex = '/^P(?:(?P<weeks>\d+(?:\.\d+)?)W|(?:(?P<days>\d+(?:\.\d+)?)D)?(?:T(?:(?P<hours>\d+(?:\.\d+)?)H)?(?:(?P<minutes>\d+(?:\.\d+)?)M)?(?:(?P<seconds>\d+(?:\.\d+)?)S)?)?)$/i';
+
+        if (!preg_match($isoRegex, $duration, $matches)) {
+            return false;
+        }
+
+        $hasValue = false;
+        $totalSeconds = 0.0;
+
+        if (isset($matches['weeks']) && $matches['weeks'] !== '') {
+            $hasValue = true;
+            $totalSeconds += (float)$matches['weeks'] * 7 * self::DAY;
+
+            if (!empty($matches['days']) || !empty($matches['hours']) || !empty($matches['minutes']) || !empty($matches['seconds'])) {
+                return false; // Weeks cannot be combined with other designators
+            }
+        }
+
+        if (isset($matches['days']) && $matches['days'] !== '') {
+            $hasValue = true;
+            $totalSeconds += (float)$matches['days'] * self::DAY;
+        }
+
+        if (isset($matches['hours']) && $matches['hours'] !== '') {
+            $hasValue = true;
+            $totalSeconds += (float)$matches['hours'] * self::HOUR;
+        }
+
+        if (isset($matches['minutes']) && $matches['minutes'] !== '') {
+            $hasValue = true;
+            $totalSeconds += (float)$matches['minutes'] * self::MINUTE;
+        }
+
+        if (isset($matches['seconds']) && $matches['seconds'] !== '') {
+            $hasValue = true;
+            $totalSeconds += (float)$matches['seconds'];
+        }
+
+        if (!$hasValue) {
+            return false;
+        }
+
+        $this->parseNumeric($totalSeconds);
+
+        return true;
     }
 
     /**
@@ -358,6 +411,40 @@ final class TimeDuration implements JsonSerializable, Stringable
         ];
 
         return str_replace(array_keys($replacements), array_values($replacements), $pattern);
+    }
+
+    public function toIso8601(): string
+    {
+        $dateDesignators = '';
+        $timeDesignators = '';
+
+        if ($this->days > 0) {
+            $dateDesignators .= $this->days . 'D';
+        }
+
+        if ($this->hours > 0) {
+            $timeDesignators .= $this->hours . 'H';
+        }
+
+        if ($this->minutes > 0) {
+            $timeDesignators .= $this->minutes . 'M';
+        }
+
+        if ($this->seconds > 0 || ($dateDesignators === '' && $timeDesignators === '')) {
+            $seconds = strpos((string)$this->seconds, '.') !== false
+                ? rtrim(rtrim((string)$this->seconds, '0'), '.')
+                : (string)$this->seconds;
+
+            $timeDesignators .= $seconds . 'S';
+        }
+
+        if ($timeDesignators !== '') {
+            $timeDesignators = 'T' . $timeDesignators;
+        }
+
+        $isoDuration = 'P' . $dateDesignators . $timeDesignators;
+
+        return $isoDuration === 'P' ? 'PT0S' : $isoDuration;
     }
 
     /**

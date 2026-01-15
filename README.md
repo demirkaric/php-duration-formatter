@@ -7,7 +7,7 @@
 
 **Advanced PHP library for parsing, formatting, converting, and humanizing time durations.**
 
-Supports intuitive input formats like `1h 30m`, `01:30:00`, or `5400` and provides custom formatting, JSON serialization, and accurate conversion to seconds and minutes.
+Supports intuitive input formats like `1h 30m`, `01:30:00`, `5400`, or **ISO 8601** (`PT1H30M`, `P1DT2H`) and provides custom formatting, JSON serialization, and accurate conversion to seconds and minutes.
 
 > 🛠️ Built as an enhanced and modernized alternative to [kevinkhill/php-duration](https://github.com/kevinkhill/php-duration), offering expanded feature support, token-based formatting, custom hours-per-day handling, and complete PHPUnit test coverage.
 
@@ -16,13 +16,14 @@ Supports intuitive input formats like `1h 30m`, `01:30:00`, or `5400` and provid
 ## ✅ Features:
 
 - Flexible input support: parse durations from strings, numbers, or colon-formatted time
+- **ISO 8601 duration format support** (parsing and formatting)
 - Conversion to seconds, minutes, arrays, strings, and JSON
 - Custom formatting with tokens (`d`, `hh`, `mm`, `ss`, etc.)
 - Support for days with customizable `hoursPerDay`
 - Human-readable output (`1h 30m`)
 - Chainable and reusable instance
 - Implements `JsonSerializable` and `Stringable`
-- Fully tested with 100% PHPUnit coverage (61 tests, 134 assertions)
+- Fully tested with 94+ % PHPUnit coverage 
 
 ---
 
@@ -63,6 +64,59 @@ echo json_encode($duration);      // {"seconds":6150,"values":{"days":0,"hours":
 - `"01:30"` or `"01:30:45"`  
 - `3600` or `3661.5`  
 - `"2d"`  
+- **ISO 8601 durations**: `"PT1H30M"`, `"P1DT2H"`, `"P2W"`
+
+---
+
+### 🌐 ISO 8601 Duration Support
+
+The library fully supports **ISO 8601 duration format** for both parsing and formatting.
+
+#### Parsing ISO 8601 Durations
+
+```php
+use Demirk\PhpDurationFormatter\TimeDuration;
+
+// Time only
+$duration1 = new TimeDuration('PT1H30M');
+echo $duration1->toSeconds();    // 5400.0
+echo $duration1->humanize();     // "1h 30m"
+
+// Date and time
+$duration2 = new TimeDuration('P1DT2H30M');
+echo $duration2->toSeconds();    // 95400.0
+echo $duration2->humanize();     // "1d 2h 30m"
+
+// Weeks (converted to days)
+$duration3 = new TimeDuration('P2W');
+echo $duration3->toSeconds();    // 1209600.0
+echo $duration3->humanize();     // "14d"
+
+// Decimal values
+$duration4 = new TimeDuration('PT2.5H');
+echo $duration4->humanize();     // "2h 30m"
+```
+
+#### Formatting to ISO 8601
+
+```php
+$duration = new TimeDuration('1d 2h 30m 45s');
+echo $duration->toIso8601();     // "P1DT2H30M45S"
+
+$duration2 = new TimeDuration('5h 30m');
+echo $duration2->toIso8601();    // "PT5H30M"
+```
+
+**Supported ISO 8601 Components:**
+- `P` - Period designator (required)
+- `nD` - Days
+- `T` - Time designator
+- `nH` - Hours
+- `nM` - Minutes
+- `nS` - Seconds
+- `nW` - Weeks (converted to days)
+
+> 💡 **Note**: Weeks are normalized to days (e.g., `P1W` becomes `P7D` when formatting).
 
 ---
 
